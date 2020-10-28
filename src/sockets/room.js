@@ -31,8 +31,10 @@ module.exports = (io) => {
                         RoomsConnections.getConnectedUsers(roomID, true));
 
             if (roomConnection.status.inGame) {
-              // TODO: handle case when game is in highlights and not statement phase
-              //       which is just to send the high/summary command after statement
+              /*
+              TODO:
+              handle case when game is in highlights and not statement phase
+              which is just to send the high/summary command after statement */
               socket.emit('start_game');
               socket.emit('new_statement', roomConnection.room.currentStatement);
               console.log('sent user directly to game', roomID, 'with statement', roomConnection.room.currentStatement, 'socket id:', socket.id);
@@ -80,11 +82,33 @@ module.exports = (io) => {
 
     socket.on('disconnect', reason => {
       console.log('removing user from room');
-      const user = RoomsConnections.getUserObject(socket.id);
-      if (user !== null) {
-        const roomID = RoomsConnections.removeUserFromRoom(socket.id);
-        if (roomID !== null) {
-          socket.to(roomID).emit('remove_user', user.username);
+      const { user, roomID } = RoomsConnections.removeUserFromRoom(socket.id);
+
+      if (roomID !== null) {
+        socket.to(roomID).emit('remove_user', user.username);
+        const roomConnection = RoomsConnections.getRoomConnection(roomID);
+        // if user was admin, choose new admin randomly
+        if (user.status.isAdmin) {
+          const newAdmin = RoomsConnections.changeAdmin(roomID);
+          io.to(newAdmin.userID).emit('new_admin');
+        }
+        // Check if users remaining have all voted:
+        if (roomConnection.status.inGame) {
+          if (roomConnection.status.usersIDVotedReady.length
+              === roomConnection.users.length) {
+            const votes = RoomsConnections.getVotes(roomID);
+            io.to(roomID).emit('round_end', votes);
+            console.log('send round_end event with', votes);
+          }
+        } else if (roomConnection.status.inSummary) {
+          if (roomConnection.status.usersIDReady.length
+              === roomConnection.users.length) {
+            io.to(roomID).emit('next_round');
+            RoomsConnections.startGame(roomID);
+            const statement = RoomsConnections.newStatement(roomID);
+            io.to(roomID).emit('new_statement', statement);
+            console.log('sent next_round and new_statement');
+          }
         }
       }
     });

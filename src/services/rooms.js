@@ -41,19 +41,6 @@ class RoomsConnections {
     return null;
   }
 
-  static getUserObject(userID) {
-    // TODO: optimize
-    const roomIDs = Object.keys(this.connections);
-    for (const roomID of roomIDs) {
-      const users = this.connections[roomID].users;
-      for (const user of users) {
-        if (user.userID === userID) { return user; }
-      }
-    }
-
-    return null;
-  }
-
   static createRoom(username, userID) {
     let exists = true;
     let randomID;
@@ -66,6 +53,7 @@ class RoomsConnections {
 
     const room = new Room(randomID);
     const user = new User(username, userID);
+    user.status = { isAdmin: true };
     this.connections[randomID] = {
       users: [ user ],
       status: {},
@@ -82,21 +70,35 @@ class RoomsConnections {
 
   static getConnectedUsers(roomID, usernameOnly = false) {
     const users = this.getRoomConnection(roomID).users;
-    if (usernameOnly) { return users.map(user => user.username); }
-    else { return users ;}
+    if (usernameOnly) {
+      return users.map(user => user.username);
+    }
+    return users;
   }
 
   static removeUserFromRoom(userID) {
-    const user = this.getUserObject(userID);
-    for (const roomID of Object.keys(this.connections)) {
-      const idx = this.getRoomConnection(roomID).users.indexOf(user);
+    /*
+    returns first room a user is in and removes user from room,
+    otherwise if the user is not in any room, returns null
+    */
+    for (const [roomID, roomConnection] of Object.entries(this.connections)) {
+      const idx = roomConnection.users
+                    .map(user => user.userID).indexOf(userID);
       if (idx > -1) {
-        this.getRoomConnection(roomID).users.splice(idx, 1);
-        return roomID;
+        const user = roomConnection.users[idx];
+        roomConnection.users.splice(idx, 1);
+        return { user, roomID };
       }
     }
 
-    return null;
+    return { user: null, roomID: null };
+  }
+
+  static changeAdmin(roomID) {
+    const roomConnection = this.getRoomConnection(roomID);
+    const newAdmin = roomConnection.users[0];
+    newAdmin.status = { isAdmin: true };
+    return newAdmin;
   }
 
   static startGame(roomID) {
@@ -106,11 +108,10 @@ class RoomsConnections {
       votedUsers: [],
       inGame: true,
       usersIDVotedReady: [],
-      allUsersVoted: false,
     }
   }
 
-  static newStatement(roomID) { 
+  static newStatement(roomID) {
     const room = this.getRoomConnection(roomID).room;
     const statement = 'hei xd im a statement, have a nice day';
     // TODO: create statement and validate
@@ -130,48 +131,31 @@ class RoomsConnections {
     if (usernames.includes(username)) {
       roomConnection.status.votedUsers.push(username);
     }
-
-    if (usernames.length === roomConnection.status.usersIDVotedReady.length) {
-      roomConnection.status.allUsersVoted = true;
-    }
 }
 
-  static getRoundStats(roomID) {
+  static getVotes(roomID) {
     const roomConnection = this.getRoomConnection(roomID);
     const votedUsers = roomConnection.status.votedUsers;
     const usersSet = [...new Set(votedUsers)];
-    let mostVoted = [];
-    let reps = 0;
-    for (let i = 0; i < usersSet.length; i++) {
-      // calculate amount of votes and username of most voted
+    const votes = {};
+    usersSet.forEach((user) => {
       const count = votedUsers.filter(
-        u => u == usersSet[i]).length;
-
-      if (count > reps) {
-        mostVoted = [usersSet[i]];
-        reps = count;
-      } else if (count == reps) {
-        mostVoted.push(usersSet[i]);
-      }
-    }
+        u => u == user).length;
+      votes[user] = count;
+    });
 
     roomConnection.status = {
       inSummary: true,
       usersIDReady: [],
-      allUsersReady: false,
-    };
+    }
 
-    return { reps, mostVoted };
+    return votes;
   }
 
   static setUserReady(userID, roomID) {
     const roomConnection = this.getRoomConnection(roomID);
     if (!roomConnection.status.usersIDReady.includes(userID)) {
       roomConnection.status.usersIDReady.push(userID);
-    }
-    if (roomConnection.status.usersIDReady.length
-        === roomConnection.users.length) {
-      roomConnection.status.allUsersReady = true;
     }
   }
 

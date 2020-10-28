@@ -22,10 +22,11 @@ module.exports = (io) => {
         io.to(roomID).emit('new_voter', notVoted);
         console.log('users that have not voted:', notVoted);
 
-        if (roomConnection.status.allUsersVoted) {
-          const roundStats = RoomsConnections.getRoundStats(roomID);
-          io.to(roomID).emit('round_end', roundStats);
-          console.log('send round_end event with', roundStats);
+        if (roomConnection.status.usersIDVotedReady.length
+            === roomConnection.users.length) {
+          const votes = RoomsConnections.getVotes(roomID);
+          io.to(roomID).emit('round_end', votes);
+          console.log('send round_end event with', votes);
         }
 
       } catch (err) {
@@ -45,7 +46,8 @@ module.exports = (io) => {
 
       socket.emit('ready_success', notReadyUsernames);
       console.log('sent ready_success', notReadyUsernames);
-      if (roomConnection.status.allUsersReady) {
+      if (roomConnection.status.usersIDReady.length
+          === roomConnection.users.length) {
         // returns true if all users have voted
         io.to(roomID).emit('next_round');
         RoomsConnections.startGame(roomID);
