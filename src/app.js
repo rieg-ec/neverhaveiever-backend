@@ -1,24 +1,25 @@
+/* eslint-disable no-undef */
 const express = require('express');
 const helmet = require('helmet');
 const logger = require('morgan');
 const cors = require('cors');
-const app = express();
 
-const { RoomsConnections } = require('./services');
+const middlewares = require('./middlewares');
+// const routes = require('./routes');
+
+const app = express();
 
 app.use(helmet());
 app.use(logger('common'));
 app.use(cors());
 
-const middlewares = require('./middlewares');
-const routes = require('./routes');
-
-PORT =  process.env.PORT || 3000;
+PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, () => {
   console.log(`app listening at ${PORT}`);
 });
 
+// eslint-disable-next-line import/order
 const io = require('socket.io')(server);
 
 require('./sockets')(io); // returns a function that accepts io object

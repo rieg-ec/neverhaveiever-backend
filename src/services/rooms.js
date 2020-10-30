@@ -18,6 +18,7 @@ class Room {
 }
 
 class RoomsConnections {
+
   static connections = {};
 
   static getRoomConnection(roomID) {
@@ -69,7 +70,7 @@ class RoomsConnections {
   }
 
   static getConnectedUsers(roomID, usernameOnly = false) {
-    const users = this.getRoomConnection(roomID).users;
+    const { users } = this.getRoomConnection(roomID);
     if (usernameOnly) {
       return users.map(user => user.username);
     }
@@ -83,7 +84,7 @@ class RoomsConnections {
     */
     for (const [roomID, roomConnection] of Object.entries(this.connections)) {
       const idx = roomConnection.users
-                    .map(user => user.userID).indexOf(userID);
+        .map(user => user.userID).indexOf(userID);
       if (idx > -1) {
         const user = roomConnection.users[idx];
         roomConnection.users.splice(idx, 1);
@@ -103,16 +104,15 @@ class RoomsConnections {
 
   static startGame(roomID) {
     const roomConnection = this.getRoomConnection(roomID);
-    const usersIDs = this.getConnectedUsers(roomID).map(user => user.userID);
     roomConnection.status = {
       votedUsers: [],
       inGame: true,
       usersIDVotedReady: [],
-    }
+    };
   }
 
   static newStatement(roomID) {
-    const room = this.getRoomConnection(roomID).room;
+    const { room } = this.getRoomConnection(roomID);
     const statement = 'hei xd im a statement, have a nice day';
     // TODO: create statement and validate
     room.currentStatement = statement;
@@ -131,23 +131,22 @@ class RoomsConnections {
     if (usernames.includes(username)) {
       roomConnection.status.votedUsers.push(username);
     }
-}
+  }
 
   static getVotes(roomID) {
     const roomConnection = this.getRoomConnection(roomID);
-    const votedUsers = roomConnection.status.votedUsers;
+    const { votedUsers } = roomConnection.status;
     const usersSet = [...new Set(votedUsers)];
     const votes = {};
     usersSet.forEach((user) => {
-      const count = votedUsers.filter(
-        u => u == user).length;
+      const count = votedUsers.filter(u => u === user).length;
       votes[user] = count;
     });
 
     roomConnection.status = {
       inSummary: true,
       usersIDReady: [],
-    }
+    };
 
     return votes;
   }
@@ -158,7 +157,6 @@ class RoomsConnections {
       roomConnection.status.usersIDReady.push(userID);
     }
   }
-
-};
+}
 
 module.exports = { RoomsConnections, User, Room };

@@ -1,9 +1,8 @@
 const { RoomsConnections } = require('../services');
 
+// eslint-disable-next-line func-names
 module.exports = (io) => {
-
-  io.on('connect', socket => {
-
+  io.on('connect', (socket) => {
     socket.on('room_request', (roomID, username) => {
       /*
         1. check that the room connection exists (a.k.a the room id is valid)
@@ -12,23 +11,22 @@ module.exports = (io) => {
       */
 
       try {
-
         const roomConnection = RoomsConnections.getRoomConnection(roomID);
         console.log('room_request command with roomID', roomID, 'and username', username);
         if (roomConnection !== null) {
-
           if (!RoomsConnections.getConnectedUsers(roomID, true)
-              .includes(username)) {
-
+            .includes(username)) {
             socket.join(roomID, () => {
               socket.to(roomID).emit('new_user', username);
               console.log('sent new_user command with', username, 'to:', roomID);
             });
 
             RoomsConnections.joinRoom(username, socket.id, roomID);
-            socket.emit('room_request_success',
-                        roomID,
-                        RoomsConnections.getConnectedUsers(roomID, true));
+            socket.emit(
+              'room_request_success',
+              roomID,
+              RoomsConnections.getConnectedUsers(roomID, true),
+            );
 
             if (roomConnection.status.inGame) {
               /*
@@ -39,33 +37,27 @@ module.exports = (io) => {
               socket.emit('new_statement', roomConnection.room.currentStatement);
               console.log('sent user directly to game', roomID, 'with statement', roomConnection.room.currentStatement, 'socket id:', socket.id);
             }
-
-            console.log('sent room_request_success command with', roomID, RoomsConnections.getConnectedUsers(roomID));
-
           } else {
             socket.emit('username_exists');
             console.log('username exists');
           }
-
         } else {
           console.log('room request failure: room doesnt exists');
           socket.emit('room_request_failure', roomID);
         }
-
       } catch (err) {
         console.log(err);
         socket.emit('room_request_failure', roomID);
       }
     });
 
-    socket.on('create_room', username => {
+    socket.on('create_room', (username) => {
       try {
         console.log('got create room request');
         const roomID = RoomsConnections.createRoom(username, socket.id);
         socket.join(roomID);
         socket.emit('create_room_success', roomID);
         console.log('succesfully created room:', roomID, 'SOCKET ID:', socket.id);
-
       } catch (err) {
         console.log(err);
         socket.emit('create_room_failure');
@@ -80,7 +72,7 @@ module.exports = (io) => {
       io.to(roomID).emit('new_statement', statement);
     });
 
-    socket.on('disconnect', reason => {
+    socket.on('disconnect', () => {
       console.log('removing user from room');
       const { user, roomID } = RoomsConnections.removeUserFromRoom(socket.id);
 
@@ -112,7 +104,5 @@ module.exports = (io) => {
         }
       }
     });
-
   });
-
 };

@@ -1,23 +1,22 @@
 const { RoomsConnections } = require('../services');
-
+// eslint-disable-next-line func-names
 module.exports = (io) => {
 
-  io.on('connect', socket => {
+  io.on('connect', (socket) => {
     socket.on('vote_user', (username, roomID) => {
       // socket votes for the username argument
       console.log('received vote_user event with username', username, 'and roomID', roomID, 'SOCKET ID:', socket.id);
 
       try {
-
         RoomsConnections.voteUser(username, socket.id, roomID);
         socket.emit('vote_success');
 
-        const roomConnection = RoomsConnections.getRoomConnection(roomID)
-        const usersIDVotedReady = roomConnection.status.usersIDVotedReady;
+        const roomConnection = RoomsConnections.getRoomConnection(roomID);
+        const { usersIDVotedReady } = roomConnection.status;
 
         const notVoted = RoomsConnections.getConnectedUsers(roomID)
-                    .filter(user => !usersIDVotedReady.includes(user.userID))
-                    .map(user => user.username);
+          .filter((user) => !usersIDVotedReady.includes(user.userID))
+          .map((user) => user.username);
 
         io.to(roomID).emit('new_voter', notVoted);
         console.log('users that have not voted:', notVoted);
@@ -28,24 +27,23 @@ module.exports = (io) => {
           io.to(roomID).emit('round_end', votes);
           console.log('send round_end event with', votes);
         }
-
       } catch (err) {
         console.log(err);
       }
-
     });
 
-    socket.on('ready', roomID => {
+    socket.on('ready', (roomID) => {
       RoomsConnections.setUserReady(socket.id, roomID);
       const roomConnection = RoomsConnections.getRoomConnection(roomID);
       const readyIDs = roomConnection.status.usersIDReady;
 
       const notReadyUsernames = RoomsConnections.getConnectedUsers(roomID)
-                              .filter(user => !readyIDs.includes(user.userID))
-                              .map(user => user.username);
+        .filter((user) => !readyIDs.includes(user.userID))
+        .map((user) => user.username);
 
       socket.emit('ready_success', notReadyUsernames);
       console.log('sent ready_success', notReadyUsernames);
+
       if (roomConnection.status.usersIDReady.length
           === roomConnection.users.length) {
         // returns true if all users have voted
@@ -55,8 +53,7 @@ module.exports = (io) => {
         io.to(roomID).emit('new_statement', statement);
         console.log('sent next_round and new_statement');
       }
+
     });
-
   });
-
 };

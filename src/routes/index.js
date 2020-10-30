@@ -1,8 +1,9 @@
 const { Router } = require('express');
+
 const router = Router();
 
 router.get('/', (req, res) => {
-  res.json({message: 'hei from api'});
+  res.json({ message: 'hei from api' });
 });
 
 module.exports = router;
