@@ -16,7 +16,9 @@ app.use(cors());
 PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, () => {
-  console.log(`app listening at ${PORT}`);
+  const date = new Date();
+  const hms = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+  console.log(`app listening at ${PORT} - ${hms}`);
 });
 
 // eslint-disable-next-line import/order

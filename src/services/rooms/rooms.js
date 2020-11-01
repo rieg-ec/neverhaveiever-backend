@@ -95,66 +95,53 @@ class RoomsConnections {
     return { user: null, roomID: null };
   }
 
-  static changeAdmin(roomID) {
-    const roomConnection = this.getRoomConnection(roomID);
-    const newAdmin = roomConnection.users[0];
-    newAdmin.status = { isAdmin: true };
-    return newAdmin;
+  static deleteRoom(roomID) {
+    // TODO: remove connection
+    console.log('removing room', roomID);
   }
 
   static startGame(roomID) {
     const roomConnection = this.getRoomConnection(roomID);
+    const { users } = roomConnection;
+    /* reads base statements fromm json file */
     roomConnection.status = {
-      votedUsers: [],
       inGame: true,
-      usersIDVotedReady: [],
+      usersWithoutStatement: users.map(u => u.username),
     };
+  }
+
+  static addUserStatement(statement, userID, roomID) {
+    const roomConnection = this.getRoomConnection(roomID);
+    const { username } = roomConnection.users
+      .find(user => user.userID === userID);
+    if (roomConnection.status.usersWithoutStatement.includes(username)) {
+      roomConnection.room.statements.push(statement);
+      const idx = roomConnection.status.usersWithoutStatement.indexOf(username);
+      roomConnection.status.usersWithoutStatement.splice(idx, 1);
+    }
   }
 
   static newStatement(roomID) {
-    const { room } = this.getRoomConnection(roomID);
-    const statement = 'hei xd im a statement, have a nice day';
-    // TODO: create statement and validate
-    room.currentStatement = statement;
-    room.statements.push(statement);
+    const roomConnection = this.getRoomConnection(roomID);
+    const randomIndex = Math.floor(Math.random() *
+      roomConnection.room.statements.length);
+    const statement = roomConnection.room.statements.pop(randomIndex);
+    /* get a random statement from the statements pool */
+    roomConnection.room.currentStatement = statement;
+    roomConnection.status = {
+      inStatement: true,
+      usersNotReady: roomConnection.users.map(u => u.username),
+    };
     return statement;
   }
 
-  static voteUser(username, authorID, roomID) {
-    // TODO: handle invalid username?
+  static userReadyForNextStatement(userID, roomID) {
     const roomConnection = this.getRoomConnection(roomID);
-    if (!roomConnection.status.usersIDVotedReady.includes(authorID)) {
-      roomConnection.status.usersIDVotedReady.push(authorID);
-    }
-
-    const usernames = this.getConnectedUsers(roomID, true);
-    if (usernames.includes(username)) {
-      roomConnection.status.votedUsers.push(username);
-    }
-  }
-
-  static getVotes(roomID) {
-    const roomConnection = this.getRoomConnection(roomID);
-    const { votedUsers } = roomConnection.status;
-    const usersSet = [...new Set(votedUsers)];
-    const votes = {};
-    usersSet.forEach((user) => {
-      const count = votedUsers.filter(u => u === user).length;
-      votes[user] = count;
-    });
-
-    roomConnection.status = {
-      inSummary: true,
-      usersIDReady: [],
-    };
-
-    return votes;
-  }
-
-  static setUserReady(userID, roomID) {
-    const roomConnection = this.getRoomConnection(roomID);
-    if (!roomConnection.status.usersIDReady.includes(userID)) {
-      roomConnection.status.usersIDReady.push(userID);
+    const { username } = roomConnection.users
+      .find(user => user.userID === userID);
+    if (roomConnection.status.usersNotReady.includes(username)) {
+      const idx = roomConnection.status.usersNotReady.indexOf(username);
+      roomConnection.status.usersNotReady.splice(idx, 1);
     }
   }
 }
