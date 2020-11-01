@@ -14,15 +14,26 @@ RoomsConnections.connections = {
     room,
     status: {
       inStatement: true,
-      usersReady: [],
+      usersNotReady: [
+        user1.username,
+        user2.username,
+        user3.username,
+        user4.username,
+        user5.username,
+      ],
     },
   },
 };
 
 RoomsConnections.userReadyForNextStatement(user5.userID, room.roomID);
 
-if (!RoomsConnections.connections[room.roomID].status.usersReady
-  .includes(user5.username)) {
+if (!RoomsConnections.connections[room.roomID].status.usersNotReady
+  .includes((user1.username && user2.username && user3.username && user4.username))) {
+  throw Error('userReadyForNextStatement failed');
+}
+
+if (RoomsConnections.connections[room.roomID].status.usersNotReady
+  .includes((user5.username))) {
   throw Error('userReadyForNextStatement failed');
 }
 
