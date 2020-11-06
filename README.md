@@ -1,21 +1,14 @@
-# vote-who
+# neverhaveiever socket server :coffee:
+---
 
 ## Project setup
+
+### development
 ```
-npm install
+docker-compose -f docker-compose-dev.yml up --build
 ```
 
-### Compiles and hot-reloads for development
+### production
 ```
-npm run serve
-```
-
-### Compiles and minifies for production
-```
-npm run build
-```
-
-### Lints and fixes files
-```
-npm run lint
+docker-compose up --build
 ```

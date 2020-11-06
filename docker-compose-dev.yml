@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  server:
+    build: .
+    command: npm run devstart
+    volumes:
+        - '.:/app'
+        - '/app/node_modules'
+    environment:
+      NODE_ENV: development
+      PORT: 80
+    ports:
+      - "3000:80"
