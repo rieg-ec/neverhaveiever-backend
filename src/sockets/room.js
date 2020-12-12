@@ -4,6 +4,35 @@ const { RoomsConnections } = require('../services');
 module.exports = (io) => {
 
   io.on('connect', (socket) => {
+    function disconnectSocket() {
+      const { user, roomID } = RoomsConnections.removeUserFromRoom(socket.id);
+      socket.leave(roomID);
+
+      if (roomID !== null) {
+        const roomConnection = RoomsConnections.getRoomConnection(roomID);
+        const usernames = RoomsConnections.getConnectedUsers(roomID);
+        io.to(roomID).emit('connected_users', usernames);
+        if (user.status.isAdmin) {
+          RoomsConnections.deleteRoom(roomID);
+          io.to(roomID).emit('kicked');
+        } else if (roomConnection.status.inGame &&
+                  !roomConnection.status.usersWithoutStatement.length) {
+          // io.to(roomID).emit('start_statements');
+          const statement = RoomsConnections.newStatement(roomID);
+          io.to(roomID).emit('new_statement', statement);
+
+        } else if (roomConnection.status.inStatement &&
+                  !roomConnection.status.usersNotReady.length) {
+          if (roomConnection.room.statements.length) {
+            const newStatement = RoomsConnections.newStatement(roomID);
+            io.to(roomID).emit('new_statement', newStatement);
+          } else {
+            RoomsConnections.startGame(roomID);
+            io.to(roomID).emit('start_game');
+          }
+        }
+      }
+    }
 
     socket.on('create_room', (username) => {
       try {
@@ -38,7 +67,7 @@ module.exports = (io) => {
 
             io.to(roomID).emit(
               'connected_users',
-              RoomsConnections.getConnectedUsers(roomID, true),
+              RoomsConnections.getConnectedUsers(roomID),
             );
 
             if (roomConnection.status.inGame) {
@@ -68,35 +97,8 @@ module.exports = (io) => {
       io.to(roomID).emit('start_game');
     });
 
-    socket.on('disconnect', () => {
-      const { user, roomID } = RoomsConnections.removeUserFromRoom(socket.id);
-
-      if (roomID !== null) {
-        const roomConnection = RoomsConnections.getRoomConnection(roomID);
-        const usernames = RoomsConnections.getConnectedUsers(roomID, true);
-        io.to(roomID).emit('connected_users', usernames);
-        if (user.status.isAdmin) {
-          RoomsConnections.deleteRoom(roomID);
-          io.to(roomID).emit('kicked');
-        } else if (roomConnection.status.inGame &&
-                  !roomConnection.status.usersWithoutStatement.length) {
-          io.to(roomID).emit('start_statements');
-          const statement = RoomsConnections.newStatement(roomID);
-          io.to(roomID).emit('new_statement', statement);
-
-        } else if (roomConnection.status.inStatement &&
-                  !roomConnection.status.usersNotReady.length) {
-          if (roomConnection.room.statements.length) {
-            const newStatement = RoomsConnections.newStatement(roomID);
-            io.to(roomID).emit('new_statement', newStatement);
-          } else {
-            RoomsConnections.startGame(roomID);
-            io.to(roomID).emit('start_game');
-          }
-        }
-      }
-    });
-
+    socket.on('disconnect', disconnectSocket);
+    socket.on('leave_room', disconnectSocket);
   });
 
 };
